@@ -1,0 +1,133 @@
+/**
+ *  @file       styles.css
+ *  @brief      The default .css file of BreakIt.
+ *  @author     Yiwei Chiao (ywchiao@gmail.com)
+ *  @date       10/11/2018 created.
+ *  @date       10/11/2018 last modified.
+ *  @version    0.1.0
+ *  @since      0.1.0
+ *  @copyright  MIT, © 2018 Yiwei Chiao
+ *  @details
+ *
+ *  The default .css file of BreakIt.
+ */
+
+html {
+  height: 100%;
+}
+
+body {
+  background-color: #ffffe7;
+  height: 100vh;
+  margin: 0;
+}
+
+header {
+  background-color: #c7c7f7;
+}
+
+nav {
+  background-color: #c7f7f7;
+}
+
+aside {
+  background-color: #f7c7c7;
+}
+
+article {
+  background-color: #c7c7c7;
+}
+
+section {
+  background-color: #c7f7c7;
+}
+
+footer {
+  background-color: #e7e7e7;
+}
+
+.card {
+  border-radius: 12px;
+  border: 1px solid azure;
+  padding: .25rem .5rem;
+  margin: 1rem 3rem;
+  box-shadow: 3px 5px;
+  background-color: #ffefcf;
+  opacity: .75;
+  text-align: center;
+}
+
+.card-header {
+  position: relative;
+  line-height: 2rem;
+  height: 2rem;
+  margin: 0.75rem 0.25rem 0.5rem 0.25rem;
+  text-align: left;
+}
+
+.card-content {
+  margin: .25rem;
+  padding: 1rem 0;
+  border-top: 3px solid #aaaacc;
+  border-bottom: 3px solid #aaaacc;
+}
+
+/*
+ * 頁面的根 container
+ */
+.site-container {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/*
+ * 佔據所有能佔的 (垂直) 空間的 site-body
+ */
+.site-body {
+  flex: 1 0 auto;
+}
+
+.site-banner {
+  padding: 1rem;
+}
+
+.site-title {
+  color: #4e4e5f;
+  margin: 0.5rem 0.25rem;
+}
+
+.site-subtitle {
+  margin: 0.25rem 0.1rem;
+  padding: 0 2rem;
+}
+
+.site-status {
+  background-color: #696969;
+  color: #f0fff0;
+  padding: 0 1rem;
+}
+
+/*
+ * 設置固定在底部的 site footer。
+ */
+.site-footer {
+  background: MidnightBlue;
+  color: SteelBlue;
+  padding: 1rem;
+}
+
+.float-right {
+  margin-left: auto;
+}
+
+#cursor-x {
+  color: #00ffff;
+}
+
+#cursor-y {
+  color: #ffff00;
+}
+
+/* styles.css */

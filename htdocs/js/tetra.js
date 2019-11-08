@@ -1,62 +1,109 @@
 'use strict';
 
-let blockO = (ctx, x, y) => {
-  ctx.fillStyle = 'cyan';
-  ctx.fillRect(x, y, 40, 40);
-};
-
-let blockJ = (ctx, x, y) => {
-  ctx.fillStyle = 'fuchsia';
-  ctx.fillRect(x, y, 20, 20);
-  ctx.fillRect(x, y + 20, 60, 20);
-};
-
-let blockL = (ctx, x, y) => {
-  ctx.fillStyle = 'blueviolet';
-  ctx.fillRect(x + 40, y, 20, 20);
-  ctx.fillRect(x, y + 20, 60, 20);
-};
-
-let blockS = (ctx, x, y) => {
-  ctx.fillStyle = 'dodgerblue';
-  ctx.fillRect(x + 20, y, 40, 20);
-  ctx.fillRect(x, y + 20, 40, 20);
-};
-
-let blockZ = (ctx, x, y) => {
-  ctx.fillStyle = 'lime';
-  ctx.fillRect(x, y, 40, 20);
-  ctx.fillRect(x + 20, y + 20, 40, 20);
-};
-
-let blockI = (ctx, x, y) => {
-  ctx.fillStyle = 'crimson';
-  ctx.fillRect(x, y, 80, 20);
-};
-
-let blockT = (ctx, x, y) => {
-  ctx.fillStyle = 'peru';
-  ctx.fillRect(x, y, 60, 20);
-  ctx.fillRect(x + 20, y + 20, 20, 20);
+const Board = {
+  HEIGHT: 23,
+  WIDTH: 11,
+  PADDING: 2,
 }
 
-// 重繪 *遊戲盤面*
-let paint = (ctx) => {
-  // 將圖紙填滿背景色
-  ctx.fillRect(0, 0, 640, 480);
+const Grid = {
+  WIDTH: 20,
+  HEIGHT: 20,
+}
 
-  ctx.strokeStyle = 'slateblue';
-  ctx.strokeRect(4, 4, 212, 472);
-  ctx.strokeRect(220, 4, 200, 472);
-  ctx.strokeRect(424, 4, 212, 472);
+let block = {
+  _elapsed: 0,
 
-  blockT(ctx, 220, 10);
-  blockI(ctx, 280, 10);
-  blockZ(ctx, 360, 10);
-  blockS(ctx, 220, 50);
-  blockJ(ctx, 280, 50);
-  blockL(ctx, 340, 50);
-  blockO(ctx, 320, 30);
+  _color: 'peru',
+
+  _phase: 0,
+
+  _left: 4,
+
+  _top: 1,
+
+  _grids: [
+    [ [0, 1],[1, 1], [2, 1], [1, 0] ],
+    [ [1, 0],[1, 1], [1, 2], [2, 1] ],
+    [ [0, 1],[1, 1], [2, 1], [1, 2] ],
+    [ [1, 0],[1, 1], [1, 2], [0, 1] ],
+  ],
+
+
+  paint: function (ctx) {
+    ctx.save();
+
+    ctx.fillStyle = this._color;
+
+    for (let offset of this._grids[this._phase]) {
+      ctx.fillRect(
+        (this._left + offset[0]) * Grid.WIDTH + 210 + Board.PADDING,
+        (this._top + offset[1]) * Grid.HEIGHT + Board.PADDING,
+        Grid.WIDTH, Grid.HEIGHT
+      );
+    }
+
+    ctx.restore();
+  },
+
+  update: function (delta) {
+    this._elapsed += delta
+
+    while (this._elapsed > 512) {
+      this._top = (this._top + 1) % 20;
+      this._phase = (this._phase + 1) % 4;
+
+      this._elapsed -= 256;
+    }
+  }
+};
+
+let game = {
+  _loop: function (ticks) {
+    if (!this._startAt) {
+      this._startAt = ticks;
+    }
+
+    this._update(ticks);
+    this._paint();
+
+    requestAnimationFrame(this._loop.bind(this));
+  },
+
+  // 重繪 *遊戲盤面*
+  _paint: function () {
+    // 取得能在 canvas 上繪圖的 context2d 物件
+    let ctx = document.querySelector('canvas').getContext('2d');
+
+    // 設定圖紙背景色
+    ctx.fillStyle = 'mintcream';
+
+    // 將圖紙填滿背景色
+    ctx.fillRect(0, 0, 640, 480);
+
+    ctx.strokeStyle = 'slateblue';
+    ctx.strokeRect(4, 4, 198, 472);
+    ctx.strokeRect(208, 4, 224, 472);
+    ctx.strokeRect(438, 4, 198, 472);
+
+    block.paint(ctx);
+  },
+
+  _update: function (ticks) {
+    if (this._lastUpdate) {
+      block.update(ticks - this._lastUpdate);
+    }
+
+    this._lastUpdate = ticks;
+  },
+
+  pause: function () {
+    cancelAnimationFrame(this._tickHandler);
+  },
+
+  start: function () {
+    this._tickHandler = requestAnimationFrame(this._loop.bind(this));
+  },
 };
 
 /**
@@ -83,18 +130,9 @@ window.addEventListener('load', () => {
   // 準備 *遊戲盤面* 的繪圖圖紙 (canvas)
   let gameCanvas = document.createElement('canvas');
 
-  // 取得能在 canvas 上繪圖的 context2d 物件
-  let ctxPaint = gameCanvas.getContext('2d');
-
   // 設定繪圖圖紙的寛高
   gameCanvas.width = 640;
   gameCanvas.height = 480;
-
-  // 設定圖紙背景色
-  ctxPaint.fillStyle = 'mintcream';
-
-  // 繪出基本遊戲盤面
-  paint(ctxPaint);
 
   // 準備承載 *遊戲內容* 的 HTML 元素
   let gameContent = document.createElement('article');
@@ -129,4 +167,6 @@ window.addEventListener('load', () => {
     document.getElementById('cursor-x').textContent = e.clientX;
     document.getElementById('cursor-y').textContent = e.clientY;
   });
+
+  game.start();
 });

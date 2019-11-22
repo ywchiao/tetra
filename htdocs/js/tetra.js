@@ -1,52 +1,78 @@
 'use strict';
 
-const Game = {
-  ROWS: 29,
-  COLS: 16,
-};
+class GameBoard {
+  PADDING = 2;
 
-const gameBoard = {
-  PADDING: 2,
+  #cols = 0;
+  #rows = 0;
 
-  ROW: Array(Game.COLS).fill(''),
+  #blankRow = null;
+  #grids = null;
 
-  grids: Array(Game.ROWS * Game.COLS).fill(''),
+  constructor (cols, rows) {
+    this.#cols = cols;
+    this.#rows = rows;
 
-  fillGrid: function (block) {
+    this.#blankRow = Array(cols).fill('');
+
+    this.#grids = Array(rows * cols).fill('');
+  };
+
+  get cols () {
+    return this.#cols;
+  };
+
+  get rows () {
+    return this.#rows;
+  };
+
+  get left () {
+    return 0;
+  };
+
+  get right () {
+    return this.left + this.cols - 1;
+  };
+
+  get grids () {
+    return this.#grids;
+  };
+
+  fillGrid (block) {
     block.grids.forEach(grid => {
-      this.grids[grid[1] * Game.COLS + grid[0]] = block.color;
+      this.#grids[grid[1] * this.#cols + grid[0]] = block.color;
     });
 
     for (let r = block.top; r <= block.bottom; r++) {
       this._clear(r);
     }
-  },
+  };
 
-  _clear: function (row) {
-    let idx = row * Game.COLS;
+  _clear (row) {
+    let idx = row * this.#cols;
 
     if (
-      this._isFinished(this.grids.slice(idx, idx + Game.COLS))
+      this._isFinished(this.#grids.slice(idx, idx + this.cols))
     ) {
-      this.grids = this.ROW.concat(
-        this.grids.slice(0, this.row * Game.COLS),
-        this.grids.slice((this.row + 1) * Game.COLs)
+      this.#grids = this.#blankRow.concat(
+        this.#grids.slice(0, row * this.cols),
+        this.#grids.slice((row + 1) * this.cols)
       );
     }
-  },
+  };
 
-  _isFinished: function (row) {
+  _isFinished (row) {
     return !row.some(grid => {
       return grid == ''
     });
-  },
+  };
 
-  isVacant: function (block) {
+  isVacant (block) {
     return block.grids.every(grid => {
-      return this.grids[grid[1] * Game.COLS + grid[0]] == ''
+      return this.#grids[grid[1] * this.cols + grid[0]] == ''
     });
-  },
-}
+  };
+} // GameBoard
 
 const Grid = {
   WIDTH: 16,
@@ -68,6 +94,10 @@ class Tetromino {
 
   get left () {
     return this.#left;
+  }
+
+  get right () {
+    return this.#left + this._cols[this._phase] - 1;
   }
 
   get top () {
@@ -101,12 +131,13 @@ class Tetromino {
     this.#left += 1;
   }
 
-  rotateClock () {
+  rotateClockwise () {
     this._phase = (this._phase + 1) % this._pattern.length;
   }
 
-  rotateCounterClock () {
-    this._phase = (this._phase - 1) % this._pattern.length;
+  rotateCounterClockwise () {
+    this._phase =
+      (this._phase - 1 + this._pattern.length) % this._pattern.length;
   }
 }
 
@@ -241,10 +272,18 @@ class BlockZ extends Tetromino {
   }
 };
 
-let game = {
-  _elapsed: 0,
+class Game {
+  #board = null;
 
-  _loop: function (ticks) {
+  _elapsed = 0;
+
+  _paused = false;
+
+  constructor(cols, rows) {
+    this.#board = new GameBoard(cols, rows);
+  }
+
+  _loop (ticks) {
     if (!this._startAt) {
       this._startAt = ticks;
     }
@@ -252,19 +291,19 @@ let game = {
     this._update(ticks);
     this._paint();
 
-    requestAnimationFrame(this._loop.bind(this));
-  },
+    this._tickHandler = requestAnimationFrame(this._loop.bind(this));
+  }
 
-  _nextBlock: function () {
+  _nextBlock () {
     let blocks = [
       BlockI, BlockJ, BlockL, BlockO, BlockS, BlockT, BlockZ,
     ];
 
     return new blocks[Math.floor(Math.random() * blocks.length)]();
-  },
+  }
 
   // 重繪 *遊戲盤面*
-  _paint: function () {
+  _paint () {
     let block = this._block;
 
     // 取得能在 canvas 上繪圖的 context2d 物件
@@ -277,34 +316,32 @@ let game = {
     ctx.fillRect(0, 0, 640, 480);
 
     ctx.strokeStyle = 'slateblue';
-    ctx.strokeRect(4, 4, 198, 472);
-    ctx.strokeRect(208, 4, 224, 472);
-    ctx.strokeRect(438, 4, 198, 472);
+    ctx.strokeRect(4, 4, 196, 472);
+    ctx.strokeRect(206, 4, 228, 472);
+    ctx.strokeRect(440, 4, 196, 472);
 
     //gameBoard.paint(ctx);
     this._paintBoard(ctx);
     this._paintBlock(ctx);
-  },
+  }
 
-  _paintBoard: function (ctx) {
+  _paintBoard (ctx) {
     ctx.save();
 
-    gameBoard.grids.forEach( (color, i) => {
+    this.#board.grids.forEach( (color, i) => {
       if (color != '') {
         ctx.fillStyle = color;
 
-        ctx.fillRect(
-          (i % Game.COLS) * Grid.WIDTH + 210 + gameBoard.PADDING,
-          (Math.floor(i / Game.COLS)) * Grid.HEIGHT + 6 + gameBoard.PADDING,
-          Grid.WIDTH, Grid.HEIGHT
+        this._fillCell(
+          ctx, i % this.#board.cols, Math.floor(i / this.#board.cols)
         );
       }
     });
 
     ctx.restore();
-  },
+  }
 
-  _paintBlock: function (ctx) {
+  _paintBlock (ctx) {
     let block = this._block;
 
     ctx.save();
@@ -312,20 +349,24 @@ let game = {
     ctx.fillStyle = block.color;
 
     block.grids.forEach(grid => {
-      ctx.fillRect(
-        grid[0] * Grid.WIDTH + 210 + gameBoard.PADDING,
-        grid[1] * Grid.HEIGHT + 6 + gameBoard.PADDING,
-        Grid.WIDTH, Grid.HEIGHT
-      );
+      this._fillCell(ctx, grid[0], grid[1]);
     });
 
     ctx.restore();
-  },
+  }
 
-  _translate: function (grids) {
-  },
+  _fillCell (ctx, col, row) {
+    ctx.fillRect(
+      col * Grid.WIDTH + 206 + this.#board.PADDING,
+      row * Grid.HEIGHT + 6 + this.#board.PADDING,
+      Grid.WIDTH, Grid.HEIGHT
+    );
+  }
 
-  _update: function (ticks) {
+  _translate (grids) {
+  }
+
+  _update (ticks) {
     if (this._lastUpdate) {
       this._elapsed += (ticks - this._lastUpdate);
 
@@ -334,15 +375,18 @@ let game = {
 
         block.moveTo(block.left, block.top + 1);
 
-        if (block.bottom == gameBoard.HEIGHT || !gameBoard.isVacant(block)) {
+        if (block.bottom == this.#board.rows || !this.#board.isVacant(block)) {
           block.moveTo(block.left, block.top - 1);
 
-          gameBoard.fillGrid(block);
+          this.#board.fillGrid(block);
 
           this._block = this._next;
           this._next = this._nextBlock();
 
-          this._block.moveTo(Math.floor((Game.COLS - this._block.cols) / 2) - 1, 0);
+          this._block.moveTo(
+            Math.floor((this.#board.cols - this._block.cols) / 2) - 1,
+            0
+          );
         }
 
         this._elapsed -= 512;
@@ -350,18 +394,89 @@ let game = {
     }
 
     this._lastUpdate = ticks;
-  },
+  }
 
-  pause: function () {
-    cancelAnimationFrame(this._tickHandler);
-  },
+  pause () {
+    if (this._paused) {
+      this._lastUpdate = null;
 
-  start: function () {
+      this._tickHandler = requestAnimationFrame(this._loop.bind(this));
+    }
+    else {
+      cancelAnimationFrame(this._tickHandler);
+    }
+
+    this._paused = !this._paused;
+  }
+
+  moveLeft () {
+    this._block.shiftLeft();
+
+    if (this._block.left < this.#board.left) {
+      this._block.shiftRight();
+    }
+  }
+
+  moveRight () {
+    this._block.shiftRight();
+
+    if (this._block.right > this.#board.right) {
+      this._block.shiftLeft();
+    }
+  }
+
+  rotate () {
+    this._block.rotateCounterClockwise();
+  }
+
+  start () {
     this._block = this._nextBlock();
     this._next = this._nextBlock();
 
     this._tickHandler = requestAnimationFrame(this._loop.bind(this));
-  },
+  }
+};
+
+const gameFooter = (game) => {
+  let footer = document.createElement('footer');
+  footer.className = 'card-footer';
+
+  const captions = ['開始', '暫停', '結束'];
+
+  captions.forEach((text, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'ctrl-button';
+
+    btn.textContent = text;
+    btn.value = idx;
+
+    switch (idx) {
+      case 0:
+        btn.addEventListener('click', e => {
+          game.start();
+        });
+
+        break;
+
+      case 1:
+        btn.addEventListener('click', e => {
+          game.pause();
+        });
+
+        break;
+
+      case 2:
+        btn.addEventListener('click', e => {
+          game.gameOver();
+        });
+
+        break;
+    }
+
+    footer.appendChild(btn);
+  });
+
+  return footer;
 };
 
 /**
@@ -373,6 +488,8 @@ let game = {
  */
 window.addEventListener('load', () => {
   console.log('tetra.js loaded.');
+
+  let game = new Game(14, 29);
 
   // 準備承載 *遊戲標題* (title) 的 HTML 元素
   let gameTitle = document.createElement('span');
@@ -409,6 +526,8 @@ window.addEventListener('load', () => {
   // 將 *遊戲內容* 放上 *遊戲桌面*
   gameDesktop.appendChild(gameContent);
 
+  gameDesktop.appendChild(gameFooter(game));
+
   // 將 *遊戲桌面* 放上 *網頁*
   let desktop = document.querySelector('.site-body');
   desktop.appendChild(gameDesktop);
@@ -421,10 +540,32 @@ window.addEventListener('load', () => {
    * @param e: DOM event 物件
    * @return {undefined}
    */
-  desktop.addEventListener('mousemove', (e) => {
+  desktop.addEventListener('mousemove', (e) => {ddd
     document.getElementById('cursor-x').textContent = e.clientX;
     document.getElementById('cursor-y').textContent = e.clientY;
   });
 
-  game.start();
+  document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'a':
+        game.moveLeft();
+
+        break;
+
+      case 'ArrowRight':
+      case 'd':
+        game.moveRight();
+
+        break;
+
+      case 's':
+        game.rotate();
+
+        break;
+
+      default:
+        console.log(`wrong key. key: ${e.key}`);
+    };
+  });
 });
